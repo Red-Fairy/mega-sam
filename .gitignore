@@ -1,0 +1,8 @@
+cache_flow/*
+Depth-Anything/checkpoints/*
+Depth-Anything/video_visualization/*
+UniDepth/outputs/*
+outputs_cvd/*
+cvd_opt/raft-things.pth
+reconstructions/*
+viser/*

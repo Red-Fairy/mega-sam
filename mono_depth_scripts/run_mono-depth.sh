@@ -14,22 +14,22 @@
 # limitations under the License.
 # ==============================================================================
 
-DATA_PATH=/home/zhengqili/filestore/DAVIS/DAVIS/JPEGImages/480p
-CKPT_PATH=checkpoints/megasam_final.pth
+data_dir=$1
+seq_name=$2
 
-evalset=(
-   swing
-   breakdance-flare
-)
+echo "Running trajectory estimation on $data_dir/$seq_name"
 
+# Run DepthAnything
+python Depth-Anything/run_videos.py --encoder vitl \
+  --load-from Depth-Anything/checkpoints/depth_anything_vitl14.pth \
+  --img-path "$data_dir/$seq_name" \
+  --outdir "Depth-Anything/video_visualization/$seq_name"
 
-for seq in ${evalset[@]}; do
-    CUDA_VISIBLE_DEVICE=0 python camera_tracking_scripts/test_demo.py \
-    --datapath=$DATA_PATH/$seq \
-    --weights=$CKPT_PATH \
-    --scene_name $seq \
-    --mono_depth_path $(pwd)/Depth-Anything/video_visualization \
-    --metric_depth_path $(pwd)/UniDepth/outputs \
-    --disable_vis $@
-done
+# Run UniDepth
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/UniDepth"
+
+python UniDepth/scripts/demo_mega-sam.py \
+  --scene-name "$seq_name" \
+  --img-path "$data_dir/$seq_name" \
+  --outdir UniDepth/outputs
 
