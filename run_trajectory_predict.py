@@ -37,7 +37,7 @@ def read_video(video_path, save_root, frame_interval=0, num_frames=37, fps=None,
         cv2.imwrite(save_path, image)
 
 
-def run_mono_depth(image_file_root, seq_name):
+def run_mono_depth(image_file_root, seq_name, conda_env=None):
 
     print(image_file_root, seq_name)
 
@@ -48,6 +48,9 @@ def run_mono_depth(image_file_root, seq_name):
         "--img-path", os.path.join(image_file_root, seq_name),
         "--outdir", f"Depth-Anything/video_visualization/{seq_name}"
     ]
+
+    if conda_env is not None:
+        cmd = ['conda', 'run', '-n', conda_env] + cmd
 
     subprocess.run(cmd, check=True)
 
@@ -62,10 +65,13 @@ def run_mono_depth(image_file_root, seq_name):
         "--outdir", "UniDepth/outputs"
     ]
 
+    if conda_env is not None:
+        cmd = ['conda', 'run', '-n', conda_env] + cmd
+
     subprocess.run(cmd, check=True, env=env)
 
 
-def camera_pose_estimation(image_file_root, seq_name, output_dir):
+def camera_pose_estimation(image_file_root, seq_name, output_dir, conda_env=None):
 
     cmd = [
         'python', 'camera_tracking_scripts/test_demo.py',
@@ -78,9 +84,12 @@ def camera_pose_estimation(image_file_root, seq_name, output_dir):
         "--disable_vis"
     ]
 
-    subprocess.run(cmd)
+    if conda_env is not None:
+        cmd = ['conda', 'run', '-n', conda_env] + cmd
 
-def video_depth_optimization(image_file_root, seq_name, output_dir='outputs_cvd'):
+    subprocess.run(cmd, check=True)
+
+def video_depth_optimization(image_file_root, seq_name, output_dir='outputs_cvd', conda_env=None):
 
     '''
     1. run RAFT
@@ -103,7 +112,10 @@ def video_depth_optimization(image_file_root, seq_name, output_dir='outputs_cvd'
         "--mixed_precision"
     ]
 
-    subprocess.run(cmd)
+    if conda_env is not None:
+        cmd = ['conda', 'run', '-n', conda_env] + cmd
+
+    subprocess.run(cmd, check=True)
 
     cmd = [
         'python', 'cvd_opt/cvd_opt.py',
@@ -113,7 +125,10 @@ def video_depth_optimization(image_file_root, seq_name, output_dir='outputs_cvd'
         "--output_dir", output_dir
     ]
 
-    subprocess.run(cmd)
+    if conda_env is not None:
+        cmd = ['conda', 'run', '-n', conda_env] + cmd
+
+    subprocess.run(cmd, check=True)
 
 
 def main():
@@ -128,9 +143,15 @@ def main():
     parser.add_argument('--num_processes', type=int, default=1, help='Number of processes to run in parallel')
     parser.add_argument('--process_id', type=int, default=0, help='Process ID')
     parser.add_argument('--skip_mono_depth', action='store_true', help='Skip mono-depth')
-    parser.add_argument('--output_depth_dir', type=str, help='Output depth directory')
+    parser.add_argument('--output_depth_dir', type=str, default=None, help='Output depth directory')
+    parser.add_argument('--mono_depth_env', type=str, default=None, help='Mono-depth environment')
+    parser.add_argument('--camera_pose_env', type=str, default=None, help='Camera pose environment')
+    parser.add_argument('--video_depth_env', type=str, default=None, help='Video depth environment')
 
     args = parser.parse_args()
+
+    if args.output_depth_dir is None:
+        assert args.skip_mono_depth, 'Output depth directory is required if mono-depth is not skipped'
 
     if os.path.isdir(args.input_file_path_or_dir):
         video_files = [f for f in os.listdir(args.input_file_path_or_dir) if f.endswith('.mp4')]
@@ -151,14 +172,14 @@ def main():
         read_video(video_file, image_file_root, fps=args.fps, num_frames=args.num_frames)
 
         print('Running mono-depth...')
-        run_mono_depth(args.temp_image_dir, video_name)
+        run_mono_depth(args.temp_image_dir, video_name, conda_env=args.mono_depth_env)
 
         print('Running camera pose estimation...')
-        camera_pose_estimation(args.temp_image_dir, video_name, args.output_pose_dir)
+        camera_pose_estimation(args.temp_image_dir, video_name, args.output_pose_dir, conda_env=args.camera_pose_env)
 
         if not args.skip_mono_depth:
             print('Running video depth optimization...')
-            video_depth_optimization(args.temp_image_dir, video_name, args.output_depth_dir)
+            video_depth_optimization(args.temp_image_dir, video_name, args.output_depth_dir, conda_env=args.video_depth_env)
 
         print('Done!')
         os.system(f'rm -r {image_file_root}')

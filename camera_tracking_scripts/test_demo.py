@@ -192,7 +192,7 @@ if __name__ == "__main__":
   parser.add_argument(
       "--mono_depth_path", default="Depth-Anything/video_visualization"
   )
-  parser.add_argument("--metric_depth_path", default="UniDepth/outputs ")
+  parser.add_argument("--metric_depth_path", default="UniDepth/outputs/")
   args = parser.parse_args()
 
   print("Running evaluation on {}".format(args.datapath))
@@ -314,8 +314,8 @@ if __name__ == "__main__":
           K=K,
       )
   ):
-    if not args.disable_vis:
-      show_image(image[0])
+    # if not args.disable_vis:
+    #   show_image(image[0])
 
     rgb_list.append(image[0])
     senor_depth_list.append(depth)
