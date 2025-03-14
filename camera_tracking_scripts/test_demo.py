@@ -108,12 +108,13 @@ def image_stream(
 
 
 def save_full_reconstruction(
-    droid, full_traj, rgb_list, senor_depth_list, motion_prob, scene_name
+    droid, full_traj, rgb_list, senor_depth_list, motion_prob, scene_name, save_root
 ):
   """Save full reconstruction."""
   from pathlib import Path
   t = full_traj.shape[0]
-  images = np.array(rgb_list[:t])  # droid.video.images[:t].cpu().numpy()
+#   images = np.array(rgb_list[:t])  # droid.video.images[:t].cpu().numpy()
+  images = np.stack(rgb_list[:t])
   disps = 1.0 / (np.array(senor_depth_list[:t]) + 1e-6)
 
   poses = full_traj  # .cpu().numpy()
@@ -144,11 +145,13 @@ def save_full_reconstruction(
   print("disp_data ", disps.shape)
 
   max_frames = min(1000, images.shape[0])
-  print("outputs/%s_droid.npz" % scene_name)
-  Path("outputs").mkdir(parents=True, exist_ok=True)
+
+  save_path = os.path.join(save_root, scene_name+".npz")
+  os.makedirs(os.path.dirname(save_path), exist_ok=True)
+  print("Saving to ", save_path)
 
   np.savez(
-      "outputs/%s_droid.npz" % scene_name,
+      save_path,
       images=np.uint8(images[:max_frames, ::-1, ...].transpose(0, 2, 3, 1)),
       depths=np.float32(1.0 / disps[:max_frames, ...]),
       intrinsic=K,
@@ -184,6 +187,8 @@ if __name__ == "__main__":
   parser.add_argument("--backend_radius", type=int, default=2)
   parser.add_argument("--backend_nms", type=int, default=3)
 
+  parser.add_argument("--save_root", default="outputs")
+
   parser.add_argument(
       "--mono_depth_path", default="Depth-Anything/video_visualization"
   )
@@ -194,6 +199,10 @@ if __name__ == "__main__":
   print(args)
 
   scene_name = args.scene_name.split("/")[-1]
+
+  if os.path.exists("outputs/%s.npz" % scene_name):
+    print("Already processed")
+    sys.exit(0)
 
   tstamps = []
   rgb_list = []
@@ -342,4 +351,5 @@ if __name__ == "__main__":
         senor_depth_list,
         motion_prob,
         args.scene_name,
+        args.save_root,
     )

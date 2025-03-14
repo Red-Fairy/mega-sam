@@ -130,6 +130,7 @@ class UniDepthV2(
         **kwargs,
     ):
         super().__init__()
+        print(config)
         self.build(config)
         self.interpolation_mode = "bilinear"
         self.eps = eps

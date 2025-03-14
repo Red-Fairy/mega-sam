@@ -53,7 +53,7 @@ def demo(model, args):
         )
     )
     depth = predictions["depth"][0, 0].cpu().numpy()
-    print(fov_)
+    # print(fov_)
     fovs.append(fov_)
     # breakpoint()
     np.savez(
@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
   print("Torch version:", torch.__version__)
   # model = UniDepthV1.from_pretrained("lpiccinelli/unidepth-v1-vitl14")
-  model = UniDepthV2.from_pretrained("lpiccinelli/unidepth-v2-vitl14")
+  model = UniDepthV2.from_pretrained("lpiccinelli/unidepth-v2-vitl14", revision="1d0d3c52f60b5164629d279bb9a7546458e6dcc4")
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   model = model.to(device)
   demo(model, args)
