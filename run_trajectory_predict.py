@@ -37,57 +37,69 @@ def read_video(video_path, save_root, frame_interval=0, num_frames=37, fps=None,
         cv2.imwrite(save_path, image)
 
 
-def run_mono_depth(image_file_root, seq_name, conda_env=None):
+def run_mono_depth(image_file_root, seq_name, 
+                   mono_depth_save_dir='video_visualization',
+                   metric_depth_save_dir='outputs',
+                   conda_env=None):
 
     print(image_file_root, seq_name)
 
-    cmd = [
-        'python', 'Depth-Anything/run_videos.py',
-        "--encoder", "vitl",
-        "--load-from", "Depth-Anything/checkpoints/depth_anything_vitl14.pth",
-        "--img-path", os.path.join(image_file_root, seq_name),
-        "--outdir", f"Depth-Anything/video_visualization/{seq_name}"
-    ]
+    mono_depth_path = os.path.join('Depth-Anything', mono_depth_save_dir)
+    if not os.path.exists(os.path.join(mono_depth_path, seq_name)):
+        cmd = [
+            'python', 'Depth-Anything/run_videos.py',
+            "--encoder", "vitl",
+            "--load-from", "Depth-Anything/checkpoints/depth_anything_vitl14.pth",
+            "--img-path", os.path.join(image_file_root, seq_name),
+            "--outdir", os.path.join(mono_depth_path, seq_name)
+        ]
 
-    if conda_env is not None:
-        cmd = ['conda', 'run', '-n', conda_env] + cmd
+        if conda_env is not None:
+            cmd = ['conda', 'run', '-n', conda_env] + cmd
 
-    subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, text=True, capture_output=False)
 
-    # do env setup
-    env = os.environ.copy()
-    env['PYTHONPATH'] = f"{env.get('PYTHONPATH', '')}:{os.getcwd()}/UniDepth"
+    
+    metric_depth_path = os.path.join('UniDepth', metric_depth_save_dir)
+    if not os.path.exists(os.path.join(metric_depth_path, seq_name)):
+        # do env setup
+        env = os.environ.copy()
+        env['PYTHONPATH'] = f"{env.get('PYTHONPATH', '')}:{os.getcwd()}/UniDepth"
 
-    cmd = [
-        'python', 'UniDepth/scripts/demo_mega-sam.py',
-        "--scene-name", seq_name,
-        "--img-path", os.path.join(image_file_root, seq_name),
-        "--outdir", "UniDepth/outputs"
-    ]
+        cmd = [
+            'python', 'UniDepth/scripts/demo_mega-sam.py',
+            "--scene-name", seq_name,
+            "--img-path", os.path.join(image_file_root, seq_name),
+            "--outdir", metric_depth_path
+        ]
 
-    if conda_env is not None:
-        cmd = ['conda', 'run', '-n', conda_env] + cmd
+        if conda_env is not None:
+            cmd = ['conda', 'run', '-n', conda_env] + cmd
 
-    subprocess.run(cmd, check=True, env=env)
+        subprocess.run(cmd, check=True, env=env, text=True, capture_output=False)
 
 
-def camera_pose_estimation(image_file_root, seq_name, output_dir, conda_env=None):
+def camera_pose_estimation(image_file_root, seq_name, output_dir, 
+                           mono_depth_save_dir='video_visualization',
+                           metric_depth_save_dir='outputs',
+                           conda_env=None):
 
-    cmd = [
-        'python', 'camera_tracking_scripts/test_demo.py',
-        "--datapath", os.path.join(image_file_root, seq_name),
-        "--weights", "checkpoints/megasam_final.pth",
-        "--scene_name", seq_name,
-        "--mono_depth_path", "Depth-Anything/video_visualization",
-        "--metric_depth_path", "UniDepth/outputs",
-        "--save_root", output_dir,
-        "--disable_vis"
-    ]
+    if not os.path.exists(os.path.join(output_dir, seq_name+'.npz')):
+        cmd = [
+            'python', 'camera_tracking_scripts/test_demo.py',
+            "--datapath", os.path.join(image_file_root, seq_name),
+            "--weights", "checkpoints/megasam_final.pth",
+            "--scene_name", seq_name,
+            "--mono_depth_path", os.path.join('Depth-Anything', mono_depth_save_dir),
+            "--metric_depth_path", os.path.join('UniDepth', metric_depth_save_dir),
+            "--save_root", output_dir,
+            "--disable_vis"
+        ]
 
-    if conda_env is not None:
-        cmd = ['conda', 'run', '-n', conda_env] + cmd
+        if conda_env is not None:
+            cmd = ['conda', 'run', '-n', conda_env] + cmd
 
-    subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, text=True, capture_output=False)
 
 def video_depth_optimization(image_file_root, seq_name, output_dir='outputs_cvd', conda_env=None):
 
@@ -115,7 +127,8 @@ def video_depth_optimization(image_file_root, seq_name, output_dir='outputs_cvd'
     if conda_env is not None:
         cmd = ['conda', 'run', '-n', conda_env] + cmd
 
-    subprocess.run(cmd, check=True)
+    print(f'Running flow estimation for {seq_name}...')
+    subprocess.run(cmd, check=True, text=True, capture_output=False)
 
     cmd = [
         'python', 'cvd_opt/cvd_opt.py',
@@ -128,8 +141,8 @@ def video_depth_optimization(image_file_root, seq_name, output_dir='outputs_cvd'
     if conda_env is not None:
         cmd = ['conda', 'run', '-n', conda_env] + cmd
 
-    subprocess.run(cmd, check=True)
-
+    print(f'Running cvd optimization for {seq_name}...')
+    subprocess.run(cmd, check=True, text=True, capture_output=False)
 
 def main():
 
@@ -137,12 +150,14 @@ def main():
     parser.add_argument('input_file_path_or_dir', type=str, help='Input file path or directory')
     parser.add_argument('output_pose_dir', type=str, help='Output pose directory')
     parser.add_argument('--temp_image_dir', type=str, default='cache', help='Temporary image directory')
+    parser.add_argument('--mono_depth_save_dir', type=str, default='video_visualization', help='Mono-depth save directory')
+    parser.add_argument('--metric_depth_save_dir', type=str, default='outputs', help='Metric-depth save directory')
     parser.add_argument('--fps', type=float, default=8, help='Output video fps')
     parser.add_argument('--num_frames', type=int, default=None, help='Number of frames to process')
     parser.add_argument('--full_sampling', action='store_true', help='Use full sampling')
     parser.add_argument('--num_processes', type=int, default=1, help='Number of processes to run in parallel')
     parser.add_argument('--process_id', type=int, default=0, help='Process ID')
-    parser.add_argument('--skip_mono_depth', action='store_true', help='Skip mono-depth')
+    parser.add_argument('--do_video_depth', action='store_true', help='Skip mono-depth')
     parser.add_argument('--output_depth_dir', type=str, default=None, help='Output depth directory')
     parser.add_argument('--mono_depth_env', type=str, default=None, help='Mono-depth environment')
     parser.add_argument('--camera_pose_env', type=str, default=None, help='Camera pose environment')
@@ -150,8 +165,8 @@ def main():
 
     args = parser.parse_args()
 
-    if args.output_depth_dir is None:
-        assert args.skip_mono_depth, 'Output depth directory is required if mono-depth is not skipped'
+    if args.do_video_depth:
+        assert args.output_depth_dir is not None, 'Output depth directory is required if video depth is not skipped'
 
     if os.path.isdir(args.input_file_path_or_dir):
         video_files = [f for f in os.listdir(args.input_file_path_or_dir) if f.endswith('.mp4')]
@@ -172,12 +187,17 @@ def main():
         read_video(video_file, image_file_root, fps=args.fps, num_frames=args.num_frames)
 
         print('Running mono-depth...')
-        run_mono_depth(args.temp_image_dir, video_name, conda_env=args.mono_depth_env)
+        run_mono_depth(args.temp_image_dir, video_name, 
+                       mono_depth_save_dir=args.mono_depth_save_dir,    
+                       metric_depth_save_dir=args.metric_depth_save_dir,
+                       conda_env=args.mono_depth_env)
 
         print('Running camera pose estimation...')
-        camera_pose_estimation(args.temp_image_dir, video_name, args.output_pose_dir, conda_env=args.camera_pose_env)
+        camera_pose_estimation(args.temp_image_dir, video_name, args.output_pose_dir, conda_env=args.camera_pose_env,
+                               mono_depth_save_dir=args.mono_depth_save_dir,
+                               metric_depth_save_dir=args.metric_depth_save_dir)
 
-        if not args.skip_mono_depth:
+        if args.do_video_depth:
             print('Running video depth optimization...')
             video_depth_optimization(args.temp_image_dir, video_name, args.output_depth_dir, conda_env=args.video_depth_env)
 
