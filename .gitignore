@@ -5,6 +5,5 @@ UniDepth/outputs/*
 outputs_cvd/*
 cvd_opt/raft-things.pth
 reconstructions/*
-viser/*
 cache/*
 outputs/*
