@@ -15,7 +15,6 @@ def read_video(video_path, save_root, frame_interval=0, num_frames=37, fps=None,
         frame_interval = (total_frames - 1) // (num_frames - 1)
     elif fps is not None:
         frame_interval = max(round(fps_this / fps), 1)
-        
 
     images = []
     while cap.isOpened():
@@ -58,6 +57,9 @@ def run_mono_depth(image_file_root, seq_name,
             cmd = ['conda', 'run', '-n', conda_env] + cmd
 
         subprocess.run(cmd, check=True, text=True, capture_output=False)
+    
+    else:
+        print(f'Mono-depth already exists for {seq_name}')
 
     
     metric_depth_path = os.path.join('UniDepth', metric_depth_save_dir)
@@ -77,6 +79,9 @@ def run_mono_depth(image_file_root, seq_name,
             cmd = ['conda', 'run', '-n', conda_env] + cmd
 
         subprocess.run(cmd, check=True, env=env, text=True, capture_output=False)
+    
+    else:
+        print(f'Metric-depth already exists for {seq_name}')
 
 
 def camera_pose_estimation(image_file_root, seq_name, output_dir, 
@@ -100,6 +105,9 @@ def camera_pose_estimation(image_file_root, seq_name, output_dir,
             cmd = ['conda', 'run', '-n', conda_env] + cmd
 
         subprocess.run(cmd, check=True, text=True, capture_output=False)
+    
+    else:
+        print(f'Camera pose already exists for {seq_name}')
 
 def video_depth_optimization(image_file_root, seq_name, output_dir='outputs_cvd', conda_env=None):
 
