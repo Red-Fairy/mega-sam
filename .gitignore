@@ -7,3 +7,10 @@ cvd_opt/raft-things.pth
 reconstructions/*
 cache/*
 outputs/*
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
