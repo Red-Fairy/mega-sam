@@ -123,34 +123,39 @@ def video_depth_optimization(image_file_root, seq_name, output_dir='outputs_cvd'
     --scene_name $seq \
     --w_grad 2.0 --w_normal 5.0
     '''
+    
+    if not os.path.exists(os.path.join(output_dir, seq_name+'_sgd_cvd_hr.npz')):
 
-    cmd = [
-        'python', 'cvd_opt/preprocess_flow.py',
-        "--datapath", os.path.join(image_file_root, seq_name),
-        "--model", "cvd_opt/raft-things.pth",
-        "--scene_name", seq_name,
-        "--mixed_precision"
-    ]
+        cmd = [
+            'python', 'cvd_opt/preprocess_flow.py',
+            "--datapath", os.path.join(image_file_root, seq_name),
+            "--model", "cvd_opt/raft-things.pth",
+            "--scene_name", seq_name,
+            "--mixed_precision"
+        ]
 
-    if conda_env is not None:
-        cmd = ['conda', 'run', '-n', conda_env] + cmd
+        if conda_env is not None:
+            cmd = ['conda', 'run', '-n', conda_env] + cmd
 
-    print(f'Running flow estimation for {seq_name}...')
-    subprocess.run(cmd, check=True, text=True, capture_output=False)
+        print(f'Running flow estimation for {seq_name}...')
+        subprocess.run(cmd, check=True, text=True, capture_output=False)
 
-    cmd = [
-        'python', 'cvd_opt/cvd_opt.py',
-        "--scene_name", seq_name,
-        "--w_grad", "2.0",
-        "--w_normal", "5.0",
-        "--output_dir", output_dir
-    ]
+        cmd = [
+            'python', 'cvd_opt/cvd_opt.py',
+            "--scene_name", seq_name,
+            "--w_grad", "2.0",
+            "--w_normal", "5.0",
+            "--output_dir", output_dir
+        ]
 
-    if conda_env is not None:
-        cmd = ['conda', 'run', '-n', conda_env] + cmd
+        if conda_env is not None:
+            cmd = ['conda', 'run', '-n', conda_env] + cmd
 
-    print(f'Running cvd optimization for {seq_name}...')
-    subprocess.run(cmd, check=True, text=True, capture_output=False)
+        print(f'Running cvd optimization for {seq_name}...')
+        subprocess.run(cmd, check=True, text=True, capture_output=False)
+
+    else:
+        print(f'Video depth optimization already exists for {seq_name}')
 
 def main():
 
